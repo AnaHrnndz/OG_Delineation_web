@@ -4,11 +4,13 @@ from werkzeug.utils import secure_filename
 import os
 import sys
 from collections import defaultdict
-sys.path.append('/data/projects/find_ogs')
-from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, expand_ogs_annotated_tree
-from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  expand_ogs, add_ogs_up_down, get_analysis_parameters
 from ete4 import Tree, PhyloTree
 from ete4.smartview import TreeStyle, NodeStyle, TreeLayout
+
+sys.path.append('/data/projects/og_delineation')
+from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, expand_ogs_annotated_tree
+from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  expand_ogs, add_ogs_up_down, get_analysis_parameters
+
 
 
 UPLOAD_FOLDER = '/data/projects/find_ogs_web/tmp'
@@ -91,19 +93,20 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
         OG_expand[int(taxid)] = info
     
     
-    
     name_file = current_data["tree_name"]
 
 
-    taxo_stats = defaultdict(dict)    
+    stats_taxo = defaultdict(dict)
     for tax, info in ogs_expanded.items():
         sci_name = info["sci_name"]
         name = str(sci_name)+'_'+str(tax)
-        taxo_stats[name]["num_ogs"] = len(info["ogs_names"])
-        taxo_stats[name]["num_mems"]= len(info["mems"])
+        stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
+        stats_taxo[name]["num_mems"]= len(info["mems"])
+    
+    for k,v in stats_taxo.items():
+        taxo_stats[k] = v
         
 
-    
     general_results["Tree name"] = name_file
     general_results["Total seqs"] = len(total_mems_in_tree)
     general_results["Seqs in OGs"] = len(total_mems_in_ogs)
@@ -112,11 +115,83 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
 
 
     
-    return  t, general_results,  taxo_stats,  parameters
+    return  t, general_results,  stats_taxo,  parameters
+
+#UPLOAD TREE WITH OR WITHOUT ANNOTATATIONS
+@app.route('/upload_tree', methods=['GET', 'POST'])
+def upload_tree():    
+        
+    
+    if not request.files['tree'].filename == "":
+        f = request.files['tree']
+        name_file = secure_filename(f.filename)
+        ori_tree = f.read().decode("utf-8")
+        success_message = "Load tree: "+ name_file
+    else:
+        error_message = "Upload tree"
+        return render_template('index.html', error_message = error_message)
+
+    
+    taxonomy_type = request.form["taxo_type"]
+    midpoint = request.form["midpoint"]
+    annot_tree = request.form["annotated_tree"]
+
+    rt = request.files["rtree"]
+
+    if rt.filename == '':    
+        reftree = None
+    else:
+        reftree = rt.read().decode("utf-8")
+    
+    
+    user_counter_file = request.files["count_taxo"]
+    if user_counter_file.filename == '':    
+        user_counter = None
+    else:
+        user_counter = json.load(user_counter_file)
+    
+
+    user_taxo_file = request.files["user_taxo"]
+    if user_taxo_file.filename == '':    
+        user_taxo = "/data/projects/og_delineation/egg5_pfamA/data/taxonomy/e5.taxa.sqlite"
+    else:
+        db_name = secure_filename(user_taxo_file.filename)
+        user_taxo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], db_name))
+        user_taxo = os.path.join(app.config['UPLOAD_FOLDER'], db_name)
+   
+
+   
+
+    if annot_tree == 'Yes':
+        tree, general_results,  taxo_stats,  parameters = upload_annotated_tree(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
+        data = dict()
+        data['newick'] = tree
+        data['id'] = '0'
+        data['name'] = 'upload_tree'
+        headers = {"Authorization": 'Bearer hello'}
+        res = requests.post(url, data = data, headers=headers)
+        print ('response from server:',res.text)
+        return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
+    
+
+    tree = run_upload(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
+
+    data = dict()
+    data['newick'] = tree
+    data['id'] = '0'
+    data['name'] = 'upload_tree'
+    headers = {"Authorization": 'Bearer hello'}
+    res = requests.post(url, data = data, headers=headers)
+    print ('response from server:',res.text)
+    
+    
+    
+    #t = Tree(newick)
+    return render_template('index.html', success_message = success_message ) 
 
 
 
-
+#RUN ANALYSIS OF DUPLICATIONS AND SPECIATION NODES
 @app.route('/run_analysis', methods=['GET', 'POST'])
 def run_analysis():
     
@@ -172,13 +247,13 @@ def run_analysis():
     #Expand OGs at each taxid level
     ogs_expanded =  expand_ogs(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
 
-    
-
     #Clean properties
     t, all_props = run_clean_properties(t)
 
     t = get_newick(t, all_props)
     
+
+    #Save results
     current_data["tree"] = t
     current_data["properties"] = all_props
 
@@ -187,7 +262,28 @@ def run_analysis():
 
     for taxid, info in ogs_expanded.items():
         OG_expand[taxid] = info
+
+
+    stats_taxo = defaultdict(dict)
+    for tax, info in ogs_expanded.items():
+        sci_name = info["sci_name"]
+        name = str(sci_name)+'_'+str(tax)
+        stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
+        stats_taxo[name]["num_mems"]= len(info["mems"])
     
+    for k,v in stats_taxo.items():
+        taxo_stats[k] = v
+     
+    name_file = current_data["tree_name"]
+
+    general_results["Tree name"] = name_file
+    general_results["Total seqs"] = len(total_mems_in_tree)
+    general_results["Seqs in OGs"] = len(total_mems_in_ogs)
+    general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
+    general_results["Num Ogs"] = len(ogs_info)
+
+    
+    #Send data to ete4 smartview server
     data = dict()
     data['newick'] = t
     data['id'] = '0'
@@ -195,25 +291,120 @@ def run_analysis():
     headers = {"Authorization": 'Bearer hello'}
     res = requests.post(url, data = data, headers=headers)
     
-    name_file = current_data["tree_name"]
+    
+    return render_template('index.html', general_results = general_results, taxonomy_result = stats_taxo, parameters = parameters)
 
-    taxo_stats = defaultdict(dict)    
-    for tax, info in ogs_expanded.items():
-        sci_name = info["sci_name"]
-        name = str(sci_name)+'_'+str(tax)
-        taxo_stats[name]["num_ogs"] = len(info["ogs_names"])
-        taxo_stats[name]["num_mems"]= len(info["mems"])
-        
+
+            
+              
+
+#ACTIONS ON NODES AND TAXIDS    
+@app.route('/search', methods = ['GET', 'POST'])
+def search():
+    input_value = request.form["search"]
+    stats_taxo = defaultdict()
+    
+    for taxid_sci_name, info in taxo_stats.items():
+        if input_value == taxid_sci_name.split('_',1)[0]:
+            stats_taxo[taxid_sci_name] = info
+        elif input_value == taxid_sci_name.split('_',1)[1]:
+            stats_taxo[taxid_sci_name] = info
+
+    results = defaultdict()
+    results = general_results
+
+    return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
+
+
+@app.route('/collapse/<sci_name_taxid>', methods=['GET', 'POST'])
+def collapse(sci_name_taxid):
+
+    taxid = int(sci_name_taxid.split('_',1)[1])
+    t = Tree(current_data["tree"], format = 1)
+
+    #Remove collapsed prop from previous visualizations
+    for node in t.traverse():
+        if node.props.get('collapsed'):
+            node.props['collapsed'] = 'true'
+
+    nodes2collapse = OG_expand[taxid]['ogs_names']
+    for node_name in nodes2collapse:
+        node = t.search_nodes(name=node_name)[0]
+        node.props['collapsed'] = "true"
+
+    t, all_props = run_clean_properties(t)
+
+    t = get_newick(t, all_props)
+    current_data["tree"] = t
+    
+    headers = {"Authorization": 'Bearer hello'}
+    data = dict()
+    data['newick'] = t
+    data['id'] = '0'
+    data['name'] = 'upload_tree'
+    res = requests.post(url, data = data, headers=headers)
+    
+    results = defaultdict()
+    stats_taxo = defaultdict()
+    results = general_results
+    stats_taxo = taxo_stats
+
+
+    return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
+
+
+@app.route('/uncollapse/<sci_name_taxid>', methods=['GET', 'POST'])
+def uncollapse(sci_name_taxid):
+
+    taxid = int(sci_name_taxid.split('_',1)[1])
+    t = Tree(current_data["tree"], format = 1)
+
+    nodes2collapse = OG_expand[taxid]['ogs_names']
+    for node_name in nodes2collapse:
+        node = t.search_nodes(name=node_name)[0]
+        node.props['collapsed'] = "false"
+
+    t, all_props = run_clean_properties(t)
+
+    t = get_newick(t, all_props)
+    current_data["tree"] = t
+    
+    headers = {"Authorization": 'Bearer hello'}
+    data = dict()
+    data['newick'] = t
+    data['id'] = '0'
+    data['name'] = 'upload_tree'
+    res = requests.post(url, data = data, headers=headers)
+    
+    results = defaultdict()
+    stats_taxo = defaultdict()
+    results = general_results
+    stats_taxo = taxo_stats
+    return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
+
+
+
+#DOWNLOAD DATA
+@app.route('/download_full_tree', methods = ['GET', 'POST'])
+def download_full_tree():
+    t = current_data["tree"]
+    tree_name=current_data["tree_name"].split('.')[0]
+    parameters = current_data["parameters"]
+    values = []
+    for val in parameters.values():
+        values.append(str(val).split('.')[1])
+    
+    file_name = tree_name+'_'+'_'.join(values)+'.nw'
+    head = {'Content-Disposition':  'attachment;filename='+file_name} 
+    
+    return Response(t, mimetype="text/css", headers=head)
 
     
-    general_results["Tree name"] = name_file
-    general_results["Total seqs"] = len(total_mems_in_tree)
-    general_results["Seqs in OGs"] = len(total_mems_in_ogs)
-    general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
-    general_results["Num Ogs"] = len(ogs_info)
-    
-    
-    return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
+@app.route('/download_full_og_info', methods = ['GET', 'POST'])
+def download_full_og_info():
+    og_data = jsonify(OG_INFO)
+    og_data.headers['Content-Disposition'] = 'attachment;filename=og_info.json'
+    return og_data
 
 
 @app.route('/download/<sci_name_taxid>', methods = ['GET', 'POST'])
@@ -254,186 +445,16 @@ def download(sci_name_taxid):
     og_data = jsonify(download_data)
     file_name = str(taxid)+'_og_info.json'
     og_data.headers['Content-Disposition'] = 'attachment;filename='+file_name
-    print(og_data.headers)
-    return og_data
-    
-    
-
-@app.route('/download_full_tree', methods = ['GET', 'POST'])
-def download_full_tree():
-    t = current_data["tree"]
-    tree_name=current_data["tree_name"].split('.')[0]
-    parameters = current_data["parameters"]
-    values = []
-    for val in parameters.values():
-        values.append(str(val).split('.')[1])
-    
-    file_name = tree_name+'_'+'_'.join(values)+'.nw'
-    head = {'Content-Disposition':  'attachment;filename='+file_name} 
-    
-    return Response(t, mimetype="text/css", headers=head)
-
-    
-@app.route('/download_full_og_info', methods = ['GET', 'POST'])
-def download_full_og_info():
-    og_data = jsonify(OG_INFO)
-    og_data.headers['Content-Disposition'] = 'attachment;filename=og_info.json'
     return og_data
 
 
-
-@app.route('/collapse/<sci_name_taxid>', methods=['GET', 'POST'])
-def collapse(sci_name_taxid):
-
-    taxid = int(sci_name_taxid.split('_',1)[1])
-    t = Tree(current_data["tree"], format = 1)
-
-    #Remove collapsed prop from previous visualizations
-    for node in t.traverse():
-        if node.props.get('collapsed'):
-            node.props['collapsed'] = 'true'
-
-    nodes2collapse = OG_expand[taxid]['ogs_names']
-    for node_name in nodes2collapse:
-        node = t.search_nodes(name=node_name)[0]
-        node.props['collapsed'] = "true"
-
-    t, all_props = run_clean_properties(t)
-
-    t = get_newick(t, all_props)
-    current_data["tree"] = t
-    
-    headers = {"Authorization": 'Bearer hello'}
-    data = dict()
-    data['newick'] = t
-    data['id'] = '0'
-    data['name'] = 'upload_tree'
-    res = requests.post(url, data = data, headers=headers)
-    
-    results = defaultdict()
-    stats_taxo = defaultdict()
-    results = general_results
-    stats_taxo = taxo_stats
-    return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
-
-
-@app.route('/uncollapse/<sci_name_taxid>', methods=['GET', 'POST'])
-def uncollapse(sci_name_taxid):
-
-    taxid = int(sci_name_taxid.split('_',1)[1])
-    t = Tree(current_data["tree"], format = 1)
-
-    nodes2collapse = OG_expand[taxid]['ogs_names']
-    for node_name in nodes2collapse:
-        node = t.search_nodes(name=node_name)[0]
-        node.props['collapsed'] = "false"
-
-    t, all_props = run_clean_properties(t)
-
-    t = get_newick(t, all_props)
-    current_data["tree"] = t
-    
-    headers = {"Authorization": 'Bearer hello'}
-    data = dict()
-    data['newick'] = t
-    data['id'] = '0'
-    data['name'] = 'upload_tree'
-    res = requests.post(url, data = data, headers=headers)
-    
-    results = defaultdict()
-    stats_taxo = defaultdict()
-    results = general_results
-    stats_taxo = taxo_stats
-    return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
-
-
-@app.route('/upload_tree', methods=['GET', 'POST'])
-def upload_tree():    
-    #if request.method == 'POST':
-        
-    
-    if not request.files['tree'].filename == "":
-        f = request.files['tree']
-        name_file = secure_filename(f.filename)
-        ori_tree = f.read().decode("utf-8")
-        success_message = "Load tree: "+ name_file
-    else:
-        error_message = "Upload tree"
-        return render_template('index.html', error_message = error_message)
-
-    
-    taxonomy_type = request.form["taxo_type"]
-    midpoint = request.form["midpoint"]
-    annot_tree = request.form["annotated_tree"]
-
-    rt = request.files["rtree"]
-
-    if rt.filename == '':    
-        reftree = None
-    else:
-        reftree = rt.read().decode("utf-8")
-    
-    
-    user_counter_file = request.files["count_taxo"]
-    if user_counter_file.filename == '':    
-        user_counter = None
-    else:
-        user_counter = json.load(user_counter_file)
     
 
-    user_taxo_file = request.files["user_taxo"]
-    if user_taxo_file.filename == '':    
-        user_taxo = "/data/projects/find_ogs/egg5_pfamA/data/taxonomy/e5.taxa.sqlite"
-    else:
-        db_name = secure_filename(user_taxo_file.filename)
-        user_taxo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], db_name))
-        user_taxo = os.path.join(app.config['UPLOAD_FOLDER'], db_name)
-   
-
-    #tree = run_app(ori_tree, name_file, out_node, out_reftree, p_loss, so_arq, so_bact, so_euk, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
-
-    if annot_tree == 'Yes':
-        tree, general_results,  taxo_stats,  parameters = upload_annotated_tree(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
-        data = dict()
-        data['newick'] = tree
-        data['id'] = '0'
-        data['name'] = 'upload_tree'
-        headers = {"Authorization": 'Bearer hello'}
-        res = requests.post(url, data = data, headers=headers)
-        print ('response from server:',res.text)
-        return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
-    
-    tree = run_upload(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
-
-    data = dict()
-    data['newick'] = tree
-    data['id'] = '0'
-    data['name'] = 'upload_tree'
-    headers = {"Authorization": 'Bearer hello'}
-    res = requests.post(url, data = data, headers=headers)
-    print ('response from server:',res.text)
-    
-    
-    
-    #t = Tree(newick)
-    return render_template('index.html', success_message = success_message ) 
-
-
-
-            
-              
-
-    
 
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
-
-
-        
-
 
 
 
