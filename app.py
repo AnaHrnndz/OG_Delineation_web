@@ -6,10 +6,12 @@ import sys
 from collections import defaultdict
 from ete4 import Tree, PhyloTree
 from ete4.smartview import TreeStyle, NodeStyle, TreeLayout
+import csv
+from io import StringIO
 
 sys.path.append('/data/projects/og_delineation')
 from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, expand_ogs_annotated_tree
-from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  expand_ogs, add_ogs_up_down, get_analysis_parameters
+from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  expand_ogs, add_ogs_up_down, get_analysis_parameters, flag_seqs_out_og
 
 
 
@@ -241,11 +243,16 @@ def run_analysis():
     #Detect duplications and OGs
     t, total_mems_in_ogs, ogs_info, taxid_dups_og = run_dups_and_ogs(t, outliers_node, outliers_reftree, sp_loss_perc, so_arq, so_bact, so_euk, taxonomy_db, total_mems_in_tree)
    
+    
     t, ogs_info = add_ogs_up_down(t, ogs_info)
     
     
     #Expand OGs at each taxid level
     ogs_expanded =  expand_ogs(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
+
+    
+    #Flag seqs out OGs
+    t = flag_seqs_out_og(t, total_mems_in_ogs, total_mems_in_tree)
 
     #Clean properties
     t, all_props = run_clean_properties(t)
@@ -402,10 +409,42 @@ def download_full_tree():
     
 @app.route('/download_full_og_info', methods = ['GET', 'POST'])
 def download_full_og_info():
-    og_data = jsonify(OG_INFO)
-    og_data.headers['Content-Disposition'] = 'attachment;filename=og_info.json'
-    return og_data
+    # og_data = jsonify(OG_INFO)
+    # og_data.headers['Content-Disposition'] = 'attachment;filename=og_info.json'
+    # return og_data
 
+
+    def generate(og_info):
+       
+        data = StringIO()
+        w = csv.writer(data) 
+
+        # write header
+        w.writerow(('#OG_name', 'Tax_scope_OG','Dup_name','Dup_lca', 'Size_OG', 'OG_up', 'OG_down'))
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0) 
+        # write each log item
+        for og_name, info in og_info.items():
+            w.writerow((
+                og_name,
+                info['tax_scope_og'],
+                info['name_dup'],
+                info['lca_dup'],
+                len(info['ogs_mems']),
+                info['ogs_up'],
+                info['ogs_down'],
+                
+            ))
+            yield data.getvalue()
+            data.seek(0)
+            data.truncate(0)
+
+    # stream the response as the data is generated
+    response = Response(generate(OG_INFO), mimetype='text/csv')
+    # add a filename
+    response.headers.set("Content-Disposition", "attachment", filename="og_info.csv")
+    return response
 
 @app.route('/download/<sci_name_taxid>', methods = ['GET', 'POST'])
 def download(sci_name_taxid):
@@ -424,11 +463,11 @@ def download(sci_name_taxid):
        
         download_data[node_name]["OG_lca"] = node.props.get('lca_node')
         
-        if node.props.get('node_is_og') and taxid == node.props.get('lca_dup'):
+        if node.props.get('node_is_og') and taxid == int(node.props.get('lca_dup')):
             
             download_data[node_name]["DUP_name"] = node.props.get('_dup_node_name')
             download_data[node_name]["DUP_lca"] = node.props.get('lca_dup')
-            download_data[node_name]["size_OGs"] = len(node.props.get('_mems_og'))
+            download_data[node_name]["size_OGs"] = len(node.props.get('_mems_og').split('|'))
             download_data[node_name]["OGs_up"] = node.props.get('ogs_up')
             download_data[node_name]["OGs_down"] = node.props.get('ogs_down')
             download_data[node_name]["Expanded_og"] = 'No'
@@ -436,18 +475,44 @@ def download(sci_name_taxid):
         else:
             download_data[node_name]["DUP_name"] = node.props.get('name')
             download_data[node_name]["DUP_lca"] = node.props.get('lca_node')
-            download_data[node_name]["size_OGs"] = len(node.props.get('_leaves_in'))
+            download_data[node_name]["size_OGs"] = len(node.props.get('_leaves_in').split('|'))
             download_data[node_name]["OGs_up"] = node.props.get('ogs_up')
             download_data[node_name]["OGs_down"] = node.props.get('ogs_down')
             download_data[node_name]["Expanded_og"] = 'Yes'        
 
 
-    og_data = jsonify(download_data)
-    file_name = str(taxid)+'_og_info.json'
-    og_data.headers['Content-Disposition'] = 'attachment;filename='+file_name
-    return og_data
 
 
+    def generate(download_data):
+        data = StringIO()
+        w = csv.writer(data) 
+
+        # write header
+        w.writerow(('#OG_name', 'OG_lca','Dup_lca','Dup_name', 'Expanded', 'OG_down', 'OG_up', 'Size_OG'))
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0) 
+        # write each log item
+        for og_name, og_info in download_data.items():
+            w.writerow((
+                og_name,
+                og_info['OG_lca'],
+                og_info['DUP_lca'],
+                og_info['DUP_name'],
+                og_info['Expanded_og'],
+                og_info['OGs_down'],
+                og_info['OGs_up'],
+                og_info['size_OGs']  
+            ))
+            yield data.getvalue()
+            data.seek(0)
+            data.truncate(0)
+
+    # stream the response as the data is generated
+    response = Response(generate(download_data), mimetype='text/csv')
+    # add a filename
+    response.headers.set("Content-Disposition", "attachment", filename="log.csv")
+    return response
     
 
 

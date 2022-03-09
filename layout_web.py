@@ -97,7 +97,7 @@ def get_layout_leafname():
                 node.add_face(TextFace(text, padding_x=2),
                     position="branch_right", column=1, collapsed_only=True)
                 len_leaves = str(len(set(node.props.get('_leaves_in').split('|'))))
-                print(node.props.get('_leaves_in'))
+               
                 node.add_face(TextFace(len_leaves, padding_x=2),
                     position="branch_right", column=1, collapsed_only=True)
             
@@ -156,7 +156,7 @@ def get_layout_lca_rects(tree):
 def get_layout_evoltype():
     def layout_fn(node):
 
-        ns = NodeStyle()
+       
 
         if node.props.get('lineage') and not node.is_leaf():
             
@@ -226,4 +226,22 @@ def collapse_og():
             
 
     layout_fn.__name__ = "Collapse OG"
+    return layout_fn
+
+
+def seqs_out_og():
+    def layout_fn(node):
+
+        n_list = node.search_nodes(seq_out_og= "true")
+        if len(n_list) == 0:
+            node.sm_style["draw_descendants"] = False
+            
+        else:
+            
+            node.sm_style["hz_line_color"] = "red"
+            node.sm_style["vt_line_color"] = "red"
+            node.sm_style["hz_line_width"] = 2
+
+
+    layout_fn.__name__ = "Seqs out OGS"
     return layout_fn
