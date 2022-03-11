@@ -10,7 +10,7 @@ import csv
 from io import StringIO
 
 sys.path.append('/data/projects/og_delineation')
-from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, expand_ogs_annotated_tree
+from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, expand_ogs_annotated_tree, run_load_annotated_tree
 from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  expand_ogs, add_ogs_up_down, get_analysis_parameters, flag_seqs_out_og
 
 
@@ -58,7 +58,7 @@ def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type,
 
 def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
     #Load files and DBs:
-    t = run_load_tree(tree= tree)
+    t = run_load_annotated_tree(tree= tree)
     taxonomy_db = run_load_taxonomy(taxonomy = taxonomy_type, user_taxonomy= user_taxo)
     reftree = run_load_reftree(rtree= reftree, t = t, taxonomy_db = taxonomy_db)
     taxonomy_counter = run_load_taxonomy_counter(reftree=reftree, user_taxonomy_counter = user_counter)
@@ -88,9 +88,11 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
 
     current_data["tree"] = t
 
+    OG_INFO.clear()
     for og_name, og_info in ogs_info.items():
         OG_INFO[og_name] = og_info
 
+    OG_expand.clear()
     for taxid, info in ogs_expanded.items():
         OG_expand[int(taxid)] = info
     
@@ -105,12 +107,14 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
         stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
         stats_taxo[name]["num_mems"]= len(info["mems"])
     
+    taxo_stats.clear()
     for k,v in stats_taxo.items():
         taxo_stats[k] = v
         
 
     general_results["Tree name"] = name_file
     general_results["Total seqs"] = len(total_mems_in_tree)
+    general_results["Total_species"] = SPTOTAL
     general_results["Seqs in OGs"] = len(total_mems_in_ogs)
     general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
     general_results["Num Ogs"] = len(ogs_info)
@@ -264,9 +268,11 @@ def run_analysis():
     current_data["tree"] = t
     current_data["properties"] = all_props
 
+    OG_INFO.clear()
     for og_name, og_info in ogs_info.items():
         OG_INFO[og_name] = og_info
 
+    OG_expand.clear()
     for taxid, info in ogs_expanded.items():
         OG_expand[taxid] = info
 
@@ -278,6 +284,7 @@ def run_analysis():
         stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
         stats_taxo[name]["num_mems"]= len(info["mems"])
     
+    taxo_stats.clear()
     for k,v in stats_taxo.items():
         taxo_stats[k] = v
      
@@ -285,9 +292,11 @@ def run_analysis():
 
     general_results["Tree name"] = name_file
     general_results["Total seqs"] = len(total_mems_in_tree)
+    general_results["Total_species"] = SPTOTAL
     general_results["Seqs in OGs"] = len(total_mems_in_ogs)
     general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
     general_results["Num Ogs"] = len(ogs_info)
+
 
     
     #Send data to ete4 smartview server
@@ -319,6 +328,9 @@ def search():
 
     results = defaultdict()
     results = general_results
+
+    if len(stats_taxo.keys()) == 0:
+        stats_taxo = taxo_stats
 
     return render_template('index.html', general_results = results, taxonomy_result = stats_taxo)
 
