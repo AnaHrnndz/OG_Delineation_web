@@ -15,7 +15,30 @@ hues = { "green": (81 / 360, 240 / 360) ,
         }
 
 
+# with open('/data/projects/eggNOGv5/pfamA_fams/seq2doms_2.json') as f:
+    # doms_info = json.load(f)
 
+# sequencebouncer_set = set()
+# with open('/home/plaza/soft/SequenceBouncer/dCache_1/dCache_1_sequencebouncer_result.txt') as f:
+    # for line in f:
+        # sequencebouncer_set.add(line.strip())
+
+
+
+# def add_doms(node_name):
+    
+    # doms_arq = doms_info[node_name]
+    # doms =  []
+    # for num, info in doms_arq.items():
+        # d_name = info[0]
+        # start = int(info[1])
+        # end = int(info[2])
+        # color = 'grey'
+        # dom = [start, end, "()", None, None, color, color ,"arial|8|black|%s" %(d_name)]
+        # doms.append(dom)
+    
+    # return doms
+    
 
 def get_gradient(color, num, s=None, l=None):
     h0, h1 = hues[color]
@@ -36,6 +59,7 @@ lin2colors['Bacteria'] = '#53bd42'
 lin2colors['Eukaryota'] = '#f200ff'
 lin2colors['Archaea'] = '#ff7b00'
 lin2colors['cellular organisms'] = "LightGrey"
+lin2colors['root'] = "Red"
 
 
 
@@ -92,7 +116,13 @@ def get_layout_leafname():
 
         else:
             # Collapsed face
-            if not node.is_root() and  node.props.get('collapsed', 'false') == 'true': 
+            if node.props.get('rank') in  ['order', 'genus', 'family']:
+                text = node.props.get('lca_node_name')
+                node.add_face(TextFace(text, padding_x=2),
+                    position="branch_right", column=1, collapsed_only=True)
+                
+
+            elif not node.is_root() and  node.props.get('collapsed', 'false') == 'true': 
                 text = node.props.get('lca_node_name')
                 node.add_face(TextFace(text, padding_x=2),
                     position="branch_right", column=1, collapsed_only=True)
@@ -100,6 +130,15 @@ def get_layout_leafname():
                
                 node.add_face(TextFace(len_leaves, padding_x=2),
                     position="branch_right", column=1, collapsed_only=True)
+
+                og_egg = node.props.get('og', '-')
+                node.add_face(TextFace(og_egg, padding_x=2),
+                    position="branch_right", column=1, collapsed_only=True)
+
+                pname_emapper = node.props.get('pname', '-')
+                node.add_face(TextFace(pname_emapper, padding_x=2),
+                    position="branch_right", column=1, collapsed_only=True)
+
             
             else:
                 names = summary(node.children)
@@ -233,10 +272,7 @@ def seqs_out_og():
     def layout_fn(node):
 
         n_list = node.search_nodes(seq_out_og= "true")
-        if len(n_list) == 0:
-            node.sm_style["draw_descendants"] = False
-            
-        else:
+        if len(n_list) > 0:
             
             node.sm_style["hz_line_color"] = "red"
             node.sm_style["vt_line_color"] = "red"
@@ -245,3 +281,169 @@ def seqs_out_og():
 
     layout_fn.__name__ = "Seqs out OGS"
     return layout_fn
+
+def prune_tree():
+    def layout_fn(node):
+
+        n_list = node.search_nodes(seq_out_og= "true")
+        if len(n_list) == len(node):
+            node.sm_style["fgcolor"] = 'white'
+            node.sm_style["hz_line_color"] = "white"
+            node.sm_style["vt_line_color"] = "white"
+            node.sm_style["hz_line_width"] = 2
+            
+            #node.detach()
+
+    layout_fn.contains_aligned_face = True
+    layout_fn.__name__ = "Prune tree"
+    return layout_fn
+
+
+def sequencebouncer():
+    def layout_fn(node):
+        
+        set_leaves = set(node.get_leaf_names())
+        n_list = set_leaves.intersection(sequencebouncer_set)
+        
+        if len(n_list) > 0:            
+            node.sm_style["hz_line_color"] = "pink"
+            node.sm_style["vt_line_color"] = "pink"
+            node.sm_style["hz_line_width"] = 2
+    
+    layout_fn.__name__ = "SequenceBouncer"
+    return layout_fn
+
+
+
+
+def collapse_rank():
+    def layout_fn(node):
+        if node.props.get('rank') in  ['order', 'genus', 'family'] :
+            node.sm_style["draw_descendants"] = False
+
+            og_nodes = node.search_nodes(node_is_og="True")
+            if len(og_nodes) > 0:
+                node.sm_style['outline_color'] = "Dimgray"
+
+
+    layout_fn.__name__ = "Collapse order rank"
+    return layout_fn        
+
+# def get_aln(alg):
+    # def layout_fn(node):
+       
+        # if node.is_leaf():
+            # seq = alg.get_seq(node.name)
+            # seqFace = SeqMotifFace(seq, bgcolor="grey", gap_format="line", gapcolor="red")
+            # node.add_face(seqFace, column = 1, position = "aligned") 
+        # else:
+            # # I believe this gives you the first leaf
+            # first_leaf = next(node.iter_leaves())
+            # seq = alg.get_seq(first_leaf.name)
+            # seqFace = SeqMotifFace(seq, bgcolor="grey", gap_format="line", gapcolor="red")
+            # node.add_face(seqFace, column = 1, position = "aligned", collapsed_only=True) 
+    
+    # layout_fn.__name__ = 'alg_blocks'
+    # layout_fn.contains_aligned_face = True
+    # return layout_fn
+
+
+def get_species_overlap():
+    def layout_fn(node):
+        if node.props.get('so_score', '0.0'):
+            so = round(float(node.props.get('so_score', '0.0')),3)
+            so_face = TextFace(str(so), color = "green")
+            node.add_face(so_face, position = "branch_bottom",  column = 0)
+
+    layout_fn.__name__ = "Species Overlap"
+    return layout_fn
+
+
+def get_pnames():
+    def layout_fn(node):
+        if node.is_leaf() and node.props.get('pname'):
+            face_pname = TextFace(node.props.get('pname'))
+            node.add_face(face_pname, column = 2, position = 'aligned')
+        elif node.props.get('pname'):
+            face_pname = TextFace(node.props.get('pname'))
+            node.add_face(face_pname, column = 2, position = 'aligned', collapsed_only=True)
+
+    layout_fn.__name__ = 'Pref name'
+    layout_fn.contains_aligned_face = True
+    return layout_fn
+
+
+def get_ogs():
+    def layout_fn(node):
+        if node.is_leaf() and node.props.get('og'):
+            og_pname = TextFace(node.props.get('og'))
+            node.add_face(og_pname, column = 3, position = 'aligned')
+        if node.props.get('og'):
+            face_og = TextFace(node.props.get('og'))
+            node.add_face(face_og, column = 3, position = 'aligned', collapsed_only=True)
+
+    layout_fn.__name__ = 'EGGNOG'
+    layout_fn.contains_aligned_face = True
+    return layout_fn
+
+#Load doms from scratch
+# def get_doms():
+    # def layout_fn(node):
+        # if node.is_leaf() and node.name in doms_info.keys():
+            # doms = add_doms(node.name)
+            # seqFace = SeqMotifFace(seq=None, motifs = doms)
+            # node.add_face(seqFace, column =  4, position = "aligned")
+        # else:
+            # first_node = next(node.iter_leaves())
+            # if first_node.name in doms_info.keys():
+                # doms = add_doms(first_node.name)
+                # seqFace = SeqMotifFace(seq=None, motifs = doms)
+                # node.add_face(seqFace, column =  4, position = "aligned", collapsed_only=True)
+        
+        
+    # layout_fn.__name__ = 'PFAM Domains'
+    # layout_fn.contains_aligned_face = True
+    # return layout_fn
+
+def parse_pfam_doms(n):
+
+    doms_string = n.props.get('dom_arq')
+    doms = []
+    
+    for d in doms_string.split('|'):
+        d_info = d.split('@')
+        dom = [int(d_info[1]), int(d_info[2]), "()", None, None, 'grey', 'grey' ,"arial|20|black|%s" %(d_info[0])]
+        doms.append(dom)
+    return(doms)
+
+
+
+#Load doms from tree
+def get_doms():
+    def layout_fn(node):
+        if node.is_leaf():
+            if node.props.get('dom_arq'):
+                doms = parse_pfam_doms(node)
+                seqFace = SeqMotifFace(seq=None, motifs = doms)
+                node.add_face(seqFace, column =  4, position = "aligned")
+        else:
+            first_node = next(node.iter_leaves())
+            if first_node.props.get('dom_arq'):
+                doms = parse_pfam_doms(first_node)
+                seqFace = SeqMotifFace(seq=None, motifs = doms)
+                node.add_face(seqFace, column =  4, position = "aligned", collapsed_only=True)
+        
+        
+    layout_fn.__name__ = 'PFAM Domains'
+    layout_fn.contains_aligned_face = True
+    return layout_fn
+
+# def prune_tree():
+    
+    # def layout_fn():
+
+
+    # layout_fn.__name__ = 'Prune Tree'
+    # layout_fn.contains_aligned_face = True
+    # return layout_fn
+

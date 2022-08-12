@@ -133,29 +133,41 @@
                         <div id="collapseTwo" class="accordion-collapse collapse hide" aria-labelledby="headingTwo" data-bs-parent="#accordionExample2">
                             <div class="accordion-body">
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label for="outliers_node">Outliers node:</label>
-                                        <input type="number" class="form-control" value="0.01" step="0.01" id=" outliers_node" name="out_node">
+                                        <input type="number" class="form-control" value="0.01" step="0.01" id="outliers_node" name="out_node">
+                                        
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label for="outliers_reftree">Outliers reftree:</label>
-                                        <input type="number" class="form-control" value="0.05" step="0.01" id=" outliers_reftree" name="out_reft">
+                                        <input type="number" class="form-control" value="0.05" step="0.01" id="outliers_reftree" name="out_reft">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-3">
+                                        <label for="inherit_outliers">Inherit outliers:</label>
+                                        <select class="form-select" id="inherit_outliers" name="inherit_out">
+                                            <option selected value="yes">Yes</option>
+                                            <option value="no">No</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
                                         <label for="sp_loss_perc">Percentage losses:</label>
-                                        <input type="number" class="form-control" value="0.9" step="0.01" id="sp_loss_perc" name="p_loss">
+                                        <input type="number" class="form-control" value="0.8" step="0.01" id="sp_loss_perc" name="p_loss">
                                     </div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
+                                        <label for="so_overlap_cell_org">Species Overlap Cell Org:</label>
+                                        <input type="number" class="form-control" value="0.2" step="0.01" id="so_overlap_cell_org" name="so_cell_org">
+                                    </div>
+                                    <div class="col-md-3">
                                         <label for="so_overlap_euk">Species Overlap euk:</label>
                                         <input type="number" class="form-control" value="0.2" step="0.01" id="so_overlap_euk" name="so_euk">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label for="so_overlap_bact">Species Overlap bact:</label>
                                         <input type="number" class="form-control" value="0.2" step="0.01" id="so_overlap_bact" name="so_bact">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label for="so_overlap_arq">Species Overlap arq:</label>
                                         <input type="number" class="form-control" value="0.2" step="0.01" id="so_overlap_arq" name="so_arq">
                                     </div>
@@ -197,6 +209,23 @@
                                                 
                                                 {% endfor %}
                                                 </table>
+                                                
+                                                {%if check %}
+                                                <form action="/show_original" method="post">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" onclick="this.form.submit()" type="checkbox" value="YES" name="ShowOriginal" id="Switch2" checked>
+                                                        <label class="form-check-label" for="Switch2">Show prune tree1</label>
+                                                    </div>
+                                                </form>
+                                                {% else %}
+                                                <form action="/show_prune" method="post">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" onclick="this.form.submit()" type="checkbox" value="YES" name="ShowPrune"  id="Switch1">
+                                                        <label class="form-check-label" for="Switch1">Show prune tree</label>
+                                                    </div>
+                                                </form>
+                                                {% endif %}
+                                                        
                                             </div>
                                         </div>
                                         <div class="col-2">
@@ -209,8 +238,43 @@
                                                     <button type="submit"> Download all OGs info  </button>
                                                 </form>
                                         </div>
-                                    </div>
+
+                                        <div class="col-2">
+                                            <!-- Button trigger modal -->
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                                                Recover sequences
+                                            </button>
+
+                                              <!-- Modal -->
+                                            <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title" id="exampleModalLabel">Run recovery pipeline:</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                    </div>
+                                                    <form action="/run_recover" method="post" enctype="multipart/form-data">
+                                                        <div class="modal-body">
+                                                            <p>
+                                                                <label for="raw_fasta">Select your fasta:</label>
+                                                                <input type="file" class="form-control" id="raw_fasta" name="fasta">
+                                                            </p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="submit" class="btn btn-primary">Upload fasta</button>
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                            </div>
+                                        </div>
+                                            
                                 </div>
+
+                                        
+                            </div>
+                        </div>
                             {% endif %}
                             <br>
                             
