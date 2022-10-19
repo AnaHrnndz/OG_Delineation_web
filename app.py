@@ -7,12 +7,13 @@ from collections import defaultdict
 from ete4 import Tree, PhyloTree, SeqGroup
 from ete4.smartview import TreeStyle, NodeStyle, TreeLayout
 import csv
+import subprocess
 from io import StringIO
 
 sys.path.append('/data/projects/og_delineation')
-from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, extend_ogs_annotated_tree, run_load_annotated_tree
-from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  extend_ogs, add_ogs_up_down, get_analysis_parameters, flag_seqs_out_og, prune_tree
-from  og_delineation import run_write_fastas, run_create_hmm_og, run_hmmscan, get_best_match, expand_hmm
+from  og_delineation import run_load_tree, run_load_taxonomy, run_load_reftree, run_load_taxonomy_counter, run_preanalysis_annot_tree, get_og_info, taxlev2ogs_annotated_tree#, run_load_annotated_tree
+from  og_delineation import run_preanalysis, run_outliers_dup_score, run_dups_and_ogs, run_clean_properties, get_newick,  get_taxlevel2ogs, add_ogs_up_down, get_analysis_parameters, flag_seqs_out_og, prune_tree
+from  og_delineation import run_write_fastas, run_create_hmm_og, run_hmmscan, get_best_match, expand_hmm, update_taxlevel2ogs, update_og_info
 # sys.path.append('/data/projects/og_delineation/egg5_pfamA/data')
 # from add_pnames_ogs import add_pnames_ogs, add_possvm_info, add_ranger_info
 
@@ -27,22 +28,24 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 current_data = defaultdict()
 general_results = defaultdict()
-taxo_stats = defaultdict(dict)
-OG_INFO = defaultdict(dict)
-OG_EXTENDED = defaultdict(dict)
 USER_PROPS = list()
 
-def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
-    #Load files and DBs:
-    t = run_load_tree(tree= tree)
-    
-    taxonomy_db = run_load_taxonomy(taxonomy = taxonomy_type, user_taxonomy= user_taxo)
-    reftree = run_load_reftree(rtree= reftree, t = t, taxonomy_db = taxonomy_db)
-    taxonomy_counter = run_load_taxonomy_counter(reftree=reftree, user_taxonomy_counter = user_counter)
 
-    #Pre-analysis: rooting, annotate tree, etc
-    t , sp_set, total_mems_in_tree, SPTOTAL, CONTENT, user_props = run_preanalysis(t, name_tree, taxonomy_db, midpoint)
-   
+OG_INFO_2 = defaultdict(dict)
+
+
+glob_og_info = defaultdict(dict)
+glob_og_info_updated = defaultdict(dict)
+glob_stats_taxo = defaultdict(dict)
+glob_taxlev2ogs = defaultdict(dict)
+glob_taxlev2ogs_updated = defaultdict(dict)
+glob_content = defaultdict()
+
+
+#def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
+def upload_annotated_tree(tree, name_tree, reftree, taxonomy_counter, user_taxo, taxonomy_type, taxonomy_db):
+    
+    t , sp_set, total_mems_in_tree, SPTOTAL, CONTENT = run_preanalysis_annot_tree(tree, name_tree)
     current_data["tree_name"] = name_tree
     current_data["reftree"] = reftree
     current_data["total_species"] = SPTOTAL
@@ -52,44 +55,16 @@ def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type,
     current_data["taxo_type"] = taxonomy_type
     current_data["taxo_user"] = user_taxo
     current_data["total_mems"] = total_mems_in_tree
-
-    for p in user_props:
-        USER_PROPS.append(p)
     
-    #Clean properties
-    t, all_props = run_clean_properties(t)
-    t = get_newick(t, all_props)
-    current_data["tree"] = t
-
-    return t
-
-    
-
-def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
-    #Load files and DBs:
-    t = run_load_annotated_tree(tree= tree)
-    taxonomy_db = run_load_taxonomy(taxonomy = taxonomy_type, user_taxonomy= user_taxo)
-    reftree = run_load_reftree(rtree= reftree, t = t, taxonomy_db = taxonomy_db)
-    taxonomy_counter = run_load_taxonomy_counter(reftree=reftree, user_taxonomy_counter = user_counter)
-
-
-    t , sp_set, total_mems_in_tree, SPTOTAL, CONTENT = run_preanalysis_annot_tree(t, name_tree)
-    current_data["tree_name"] = name_tree
-    current_data["reftree"] = reftree
-    current_data["total_species"] = SPTOTAL
-    current_data["tree_cache"] = CONTENT
-    current_data["taxo_counter"] = taxonomy_counter
-    current_data["taxo_db"] = taxonomy_db
-    current_data["taxo_type"] = taxonomy_type
-    current_data["taxo_user"] = user_taxo
-    current_data["total_mems"] = total_mems_in_tree
     
     parameters = get_analysis_parameters(t) 
     current_data["parameters"] = parameters
     ogs_info, taxid_dups_og, total_mems_in_ogs = get_og_info(t)
     
-    ogs_extended =  extend_ogs_annotated_tree(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
-
+    taxlev2ogs =  taxlev2ogs_annotated_tree(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
+    
+    current_data["mems_in_ogs"] = total_mems_in_ogs
+    
     #Clean properties
     t, all_props = run_clean_properties(t)
 
@@ -97,29 +72,30 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
 
     current_data["tree"] = t
 
-    OG_INFO.clear()
+    glob_og_info.clear()
     for og_name, og_info in ogs_info.items():
-        OG_INFO[og_name] = og_info
+        glob_og_info[og_name] = og_info
 
-    OG_EXTENDED.clear()
-    for taxid, info in ogs_extended.items():
-        OG_EXTENDED[int(taxid)] = info
+    glob_taxlev2ogs.clear()
+    for taxid, info in taxlev2ogs.items():
+        glob_taxlev2ogs[int(taxid)] = info
     
     
     name_file = current_data["tree_name"]
 
 
     stats_taxo = defaultdict(dict)
-    for tax, info in ogs_extended.items():
+    for tax, info in taxlev2ogs.items():
         sci_name = info["sci_name"]
         name = str(sci_name)+'_'+str(tax)
         stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
         stats_taxo[name]["num_mems"]= len(info["mems"])
     
-    taxo_stats.clear()
+    glob_stats_taxo.clear()
     for k,v in stats_taxo.items():
-        taxo_stats[k] = v
+        glob_stats_taxo[k] = v
         
+    
 
     general_results["Tree name"] = name_file
     general_results["Total seqs"] = len(total_mems_in_tree)
@@ -132,15 +108,71 @@ def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, tax
     
     return  t, general_results,  stats_taxo,  parameters
 
+
+def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
+    #Load files and DBs:
+    t = run_load_tree(tree= tree)
+    
+    taxonomy_db = run_load_taxonomy(taxonomy = taxonomy_type, user_taxonomy= user_taxo)
+    reftree = run_load_reftree(rtree= reftree, t = t, taxonomy_db = taxonomy_db)
+    taxonomy_counter = run_load_taxonomy_counter(reftree=reftree, user_taxonomy_counter = user_counter)
+
+    if "OGD_annot" in t.props:
+        tree, general_results,  taxo_stats,  parameters = upload_annotated_tree(t, name_tree, reftree, taxonomy_counter, user_taxo, taxonomy_type, taxonomy_db)
+                                                                
+        # data = dict()
+        # data['newick'] = tree
+        # data['id'] = '0'
+        # data['name'] = 'upload_tree'
+        
+        # headers = {"Authorization": 'Bearer hello'}
+        # res = requests.post(url, data = data, headers=headers)
+        # print ('response from server:',res.text)
+        # return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
+    
+        return tree, general_results,  taxo_stats,  parameters
+
+
+    else:
+    #Pre-analysis: rooting, annotate tree, etc
+        t , sp_set, total_mems_in_tree, SPTOTAL, CONTENT, user_props = run_preanalysis(t, name_tree, taxonomy_db, midpoint)
+    
+        current_data["tree_name"] = name_tree
+        current_data["reftree"] = reftree
+        current_data["total_species"] = SPTOTAL
+        current_data["tree_cache"] = CONTENT
+        current_data["taxo_counter"] = taxonomy_counter
+        current_data["taxo_db"] = taxonomy_db
+        current_data["taxo_type"] = taxonomy_type
+        current_data["taxo_user"] = user_taxo
+        current_data["total_mems"] = total_mems_in_tree
+
+        for p in user_props:
+            USER_PROPS.append(p)
+
+        #Clean properties
+        t, all_props = run_clean_properties(t)
+        t = get_newick(t, all_props)
+        current_data["tree"] = t
+
+        general_results = defaultdict()
+        taxo_stats = defaultdict()
+        parameters = defaultdict()
+
+        return t, general_results,  taxo_stats,  parameters
+
+    
+
+
 #UPLOAD TREE WITH OR WITHOUT ANNOTATATIONS
 @app.route('/upload_tree', methods=['GET', 'POST'])
 def upload_tree():    
         
     
-    if not request.files['tree'].filename == "":
-        f = request.files['tree']
-        name_file = secure_filename(f.filename)
-        ori_tree = f.read().decode("utf-8")
+    if not request.files['tree'].filename == "":      
+        f = request.files['tree']     
+        name_file = secure_filename(f.filename)     
+        ori_tree = f.read().decode("utf-8")       
         success_message = "Load tree: "+ name_file
     else:
         error_message = "Upload tree"
@@ -151,6 +183,7 @@ def upload_tree():
     midpoint = request.form["midpoint"]
     annot_tree = request.form["annotated_tree"]
 
+    
     rt = request.files["rtree"]
 
     if rt.filename == '':    
@@ -166,31 +199,36 @@ def upload_tree():
         user_counter = json.load(user_counter_file)
     
 
-    user_taxo_file = request.files["user_taxo"]
-    if    user_taxo_file.filename == '':    
-        #user_taxo = "/data/projects/og_delineation/egg5_pfamA/data/taxonomy/e5.taxa.sqlite"
-        user_taxo = "/data/projects/og_delineation/taxonomy/taxa.sqlite"
-    else:
-        db_name = secure_filename(user_taxo_file.filename)
-        user_taxo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], db_name))
-        user_taxo = os.path.join(app.config['UPLOAD_FOLDER'], db_name)
+    user_taxo_file = request.form["user_taxonomy_database"]
+    print(user_taxo_file)
+    if   user_taxo_file == 'Egg5':    
+        user_taxo = "/data/projects/og_delineation/data/taxonomy/e5.taxa.sqlite"
+    elif  user_taxo_file == 'Egg6':
+        user_taxo = "/data/projects/og_delineation/data/taxonomy/e6.taxa.sqlite"
+
+    # else:
+        # db_name = secure_filename(user_taxo_file.filename)
+        # user_taxo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], db_name))
+        # user_taxo = os.path.join(app.config['UPLOAD_FOLDER'], db_name)
    
 
-   
-
-    if annot_tree == 'Yes':
-        tree, general_results,  taxo_stats,  parameters = upload_annotated_tree(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
-        data = dict()
-        data['newick'] = tree
-        data['id'] = '0'
-        data['name'] = 'upload_tree'
-        headers = {"Authorization": 'Bearer hello'}
-        res = requests.post(url, data = data, headers=headers)
-        print ('response from server:',res.text)
-        return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
+    # if annot_tree == 'Yes':
+        # tree, general_results,  taxo_stats,  parameters = upload_annotated_tree(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
+        # data = dict()
+        # data['newick'] = tree
+        # data['id'] = '0'
+        # data['name'] = 'upload_tree'
+        
+        # headers = {"Authorization": 'Bearer hello'}
+        # res = requests.post(url, data = data, headers=headers)
+        # print ('response from server:',res.text)
+        # return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
     
 
-    tree = run_upload(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
+    tree, general_results,  taxo_stats,  parameters  = run_upload(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
+
+
+    #tree = run_upload(ori_tree, name_file, reftree, user_counter, user_taxo, taxonomy_type, midpoint)
 
     data = dict()
     data['newick'] = tree
@@ -203,7 +241,8 @@ def upload_tree():
     
     
     #t = Tree(newick)
-    return render_template('index.html', success_message = success_message ) 
+    return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
+    #return render_template('index.html', success_message = success_message ) 
 
 
 
@@ -212,7 +251,10 @@ def upload_tree():
 def run_analysis():
     
     #t = requests.get(url + '/0' + '/newick')
-    t = PhyloTree(current_data["tree"], format = 1)
+    
+    #t = PhyloTree(current_data["tree"], format = 1)
+
+    t = current_data["tree"]
 
     outliers_node = float(request.form["out_node"])
     outliers_reftree = float(request.form["out_reft"])
@@ -274,7 +316,8 @@ def run_analysis():
     
   
     #Extended OGs at each taxid level
-    ogs_extended =  extend_ogs(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
+    taxlev2ogs =  get_taxlevel2ogs(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
+    
     
     #Flag seqs out OGs
     t = flag_seqs_out_og(t, total_mems_in_ogs, total_mems_in_tree)
@@ -299,28 +342,25 @@ def run_analysis():
     current_data["mems_in_ogs"] = total_mems_in_ogs
 
 
-    OG_INFO.clear()
+    glob_og_info.clear()
     for og_name, og_info in ogs_info.items():
-        #print(og_info)
-        OG_INFO[og_name] = og_info
+        glob_og_info[og_name] = og_info
 
-    OG_EXTENDED.clear()
-    for taxid, info in ogs_extended.items():
-        #print(info)
-        OG_EXTENDED[taxid] = info
-
-    print(OG_EXTENDED.keys())
+    glob_taxlev2ogs.clear()
+    for taxid, info in taxlev2ogs.items():
+        glob_taxlev2ogs[taxid] = info
+  
 
     stats_taxo = defaultdict(dict)
-    for tax, info in ogs_extended.items():
+    for tax, info in taxlev2ogs.items():
         sci_name = info["sci_name"]
         name = str(sci_name)+'_'+str(tax)
         stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
         stats_taxo[name]["num_mems"]= len(info["mems"])
     
-    taxo_stats.clear()
+    glob_stats_taxo.clear()
     for k,v in stats_taxo.items():
-        taxo_stats[k] = v
+        glob_stats_taxo[k] = v
      
     name_file = current_data["tree_name"]
 
@@ -331,7 +371,7 @@ def run_analysis():
     general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
     general_results["Num Ogs"] = len(ogs_info)
  
-
+   
     #Send data to ete4 smartview server
     data = dict()
     data['newick'] = t
@@ -347,24 +387,23 @@ def run_analysis():
 #RUN RECOVERY SECQUENCES OUT FROM CORE-OGS
 @app.route('/run_recover', methods = ['GET', 'POST'])
 def run_recover():
-   
-    print(current_data.keys())
-    fasta = request.files['fasta']         
-    print(fasta)
-    name_fasta = secure_filename(fasta.filename)
-    #ori_fasta = fasta.read().decode("utf-8")
 
+   
+    fasta = request.files['fasta']          
+    name_fasta = secure_filename(fasta.filename)
     
     #Get fastas: Core-OGs, seqs_out
     #Create dir to compute recovery pipelin
     try:
         path = UPLOAD_FOLDER+'/user_data'
-        os.mkdir(path)
+        subprocess.run("rm -r %s" % path, shell = True)
+        subprocess.run("mkdir -p %s" % path, shell = True)
+        
         
     except OSError:
-        print ("Creation of the directory %s failed" % path)
+        print ("Creation of the directory user data folder failed")
     else:
-        print ("Successfully created the directory %s " % path)
+        print ("Successfully created the directory user data folder ")
     
     #Write fastas
     fasta.save(path+'/'+name_fasta)
@@ -373,7 +412,7 @@ def run_recover():
 
     path2fasta_server = path+'/'+name_fasta
 
-    run_write_fastas(path2fasta_server, name_fasta, path, OG_INFO, total_mems_in_ogs, total_mems_in_tree)
+    run_write_fastas(path2fasta_server, name_fasta, path, glob_og_info, total_mems_in_ogs, total_mems_in_tree)
     
     
     #Build HMM
@@ -381,50 +420,46 @@ def run_recover():
 
     #Run hmmscan
     tblfile = run_hmmscan(path)
+    #print(tblfile)
 
     #Get best match
     best_match = get_best_match(tblfile)
     
-    #Create table for expanded og
-    OG_INFO_2 = expand_hmm(best_match, OG_INFO)
+    #Create table for og after recovery
+    og_info_recovery = expand_hmm(best_match, glob_og_info)
+    recovery_seqs = set(best_match.keys())
+
+    glob_og_info_updated = update_og_info(glob_og_info, og_info_recovery)
     
+    total_mems_in_ogs.update(recovery_seqs)
+
+   #Update in taxlev2ogs
+    glob_taxlev2ogs_updated = update_taxlevel2ogs(glob_taxlev2ogs, og_info_recovery, glob_og_info_updated) 
     
+
+    stats_taxo_updated = defaultdict(dict)
+    for tax, info in glob_taxlev2ogs_updated.items():
+        sci_name = info["sci_name"]
+        name = str(sci_name)+'_'+str(tax)
+        stats_taxo_updated[name]["num_ogs"] = len(info["ogs_names"])
+        stats_taxo_updated[name]["num_mems"]= len(info["mems"])
     
-    results = defaultdict()
-    results = general_results
 
+    name_file = current_data["tree_name"]
+    SPTOTAL = current_data["total_species"]
 
-    # OG_EXTENDED.clear()
-    # for taxid, info in ogs_extended.items():
-        # #print(info)
-        # OG_EXTENDED[taxid] = info
+    general_results["Tree name"] = name_file
+    general_results["Total seqs"] = len(total_mems_in_tree)
+    general_results["Total_species"] = SPTOTAL
+    general_results["Seqs in OGs"] = len(total_mems_in_ogs)
+    general_results["Recovery seqs"] = len(recovery_seqs) 
+    general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
+    general_results["Num Ogs"] = len(glob_og_info_updated)    
 
-    # print(OG_EXTENDED.keys())
+   # print(total_mems_in_tree.difference(total_mems_in_ogs))
 
-    # stats_taxo = defaultdict(dict)
-    # for tax, info in ogs_extended.items():
-        # sci_name = info["sci_name"]
-        # name = str(sci_name)+'_'+str(tax)
-        # stats_taxo[name]["num_ogs"] = len(info["ogs_names"])
-        # stats_taxo[name]["num_mems"]= len(info["mems"])
-    
-    # taxo_stats.clear()
-    # for k,v in stats_taxo.items():
-        # taxo_stats[k] = v
-
-
-    # name_file = current_data["tree_name"]
-
-    # general_results["Tree name"] = name_file
-    # general_results["Total seqs"] = len(total_mems_in_tree)
-    # general_results["Total_species"] = SPTOTAL
-    # general_results["Seqs in OGs"] = len(total_mems_in_ogs)
-    # general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
-    # general_results["Num Ogs"] = len(ogs_info)    
-
-    stats_taxo = defaultdict()
-    stats_taxo = taxo_stats
-    print(stats_taxo)
+    # stats_taxo = defaultdict()
+    # stats_taxo = taxo_stats
     parameters = current_data["parameters"]
     
     
@@ -437,22 +472,21 @@ def run_recover():
     headers = {"Authorization": 'Bearer hello'}
     res = requests.post(url, data = data, headers=headers)
     
-    return render_template('index.html', general_results = general_results, taxonomy_result = stats_taxo, parameters = parameters)
+    return render_template('index.html', general_results = general_results, taxonomy_result = stats_taxo_updated, parameters = parameters)
                
               
 
 #ACTIONS ON NODES AND TAXIDS 
-# 
-# 
-# 
+
+ 
 @app.route('/show_prune', methods = ['GET', 'POST'])
 def show_prune():
 
-    results = defaultdict()
-    results = general_results
+    # results = defaultdict()
+    # results = general_results
 
-    stats_taxo = defaultdict()
-    stats_taxo = taxo_stats
+    # stats_taxo = defaultdict()
+    # stats_taxo = taxo_stats
     parameters = current_data["parameters"]
     
     
@@ -523,7 +557,7 @@ def collapse(sci_name_taxid):
         if node.props.get('collapsed'):
             node.props['collapsed'] = 'true'
 
-    nodes2collapse = OG_EXTENDED[taxid]['ogs_names']
+    nodes2collapse = glob_taxlev2ogs[taxid]['ogs_names']
     for node_name in nodes2collapse:
         node = t.search_nodes(name=node_name)[0]
         node.props['collapsed'] = "true"
@@ -555,7 +589,7 @@ def uncollapse(sci_name_taxid):
     taxid = int(sci_name_taxid.split('_',1)[1])
     t = Tree(current_data["tree"], format = 1)
 
-    nodes2collapse = OG_EXTENDED[taxid]['ogs_names']
+    nodes2collapse = glob_taxlev2ogs[taxid]['ogs_names']
     for node_name in nodes2collapse:
         node = t.search_nodes(name=node_name)[0]
         node.props['collapsed'] = "false"
@@ -612,7 +646,7 @@ def download_full_og_info():
 
         # write header
         #w.writerow(('#OG_name', 'Tax_scope_OG','Dup_name','Dup_lca', 'Size_OG', 'OG_up', 'OG_down'))
-        w.writerow(('#OG_name', 'Tax_scope_PG','Dup_name','Dup_lca',  'num_leaves_OG', 'OG_up', 'OG_down', 'total_leaves', 'sp_in_OG', 'sp_out_OG', 'members'))
+        w.writerow(('#OG_name', 'Tax_scope_OG','Dup_name','Dup_lca',  'num_OG_mems', 'Recovery_seqs','OG_up', 'OG_down', 'total_leaves', 'sp_in_OG', 'sp_out_OG', 'members'))
         yield data.getvalue()
         data.seek(0)
         data.truncate(0) 
@@ -623,13 +657,14 @@ def download_full_og_info():
                 info['tax_scope_og'],
                 info['name_dup'],
                 info['lca_dup'],
-                len(info['ogs_mems'].split('|')),
+                len(info['ogs_mems']),#.split('|')),
+                len(info['recovery_mems']), 
                 info['ogs_up'],
                 info['ogs_down'],
                 info['total_leaves'],
                 info['num_sp_OGs'],
                 info['num_sp_out'],
-                info['ogs_mems']
+                '|'.join(list(info['ogs_mems']))
                 
             ))
             yield data.getvalue()
@@ -637,7 +672,11 @@ def download_full_og_info():
             data.truncate(0)
 
     # stream the response as the data is generated
-    response = Response(generate(OG_INFO), mimetype='text/csv')
+    if len(glob_og_info_updated) >0:
+        response = Response(generate(glob_og_info_updated), mimetype='text/csv')
+    else:
+        response = Response(generate(glob_og_info), mimetype='text/csv')
+        
     # add a filename
     file_name = current_data["tree_name"]+'_total_OG_info.csv'
     response.headers.set("Content-Disposition", "attachment", filename=file_name)
@@ -650,8 +689,14 @@ def download(sci_name_taxid):
    
     taxid = int(sci_name_taxid.split('_',1)[1])
     download_data = defaultdict(dict)
+
+    if len(glob_taxlev2ogs_updated.keys())>0:
+        ogs_names_download = glob_taxlev2ogs_updated[taxid]['ogs_names']
+    else:
+        ogs_names_download = glob_taxlev2ogs[taxid]['ogs_names']
+
    
-    ogs_names_download = OG_EXTENDED[taxid]['ogs_names']
+    #ogs_names_download = OG_EXTENDED[taxid]['ogs_names']
     
     
     for og_name in ogs_names_download:
@@ -736,4 +781,5 @@ def index():
 
 
 if __name__ == "__main__":
+    
     app.run(port=5001, host = '138.4.138.141')

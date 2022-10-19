@@ -192,6 +192,8 @@ def get_layout_lca_rects(tree):
     return layout_fn
 
 
+
+
 def get_layout_evoltype():
     def layout_fn(node):
 
