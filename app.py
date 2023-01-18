@@ -45,7 +45,9 @@ glob_content = defaultdict()
 #def upload_annotated_tree(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type, midpoint):
 def upload_annotated_tree(tree, name_tree, reftree, taxonomy_counter, user_taxo, taxonomy_type, taxonomy_db):
     
+    print('uploading tree.....')
     t , sp_set, total_mems_in_tree, SPTOTAL, CONTENT = run_preanalysis_annot_tree(tree, name_tree)
+    print('tree upload')
     current_data["tree_name"] = name_tree
     current_data["reftree"] = reftree
     current_data["total_species"] = SPTOTAL
@@ -59,10 +61,14 @@ def upload_annotated_tree(tree, name_tree, reftree, taxonomy_counter, user_taxo,
     
     parameters = get_analysis_parameters(t) 
     current_data["parameters"] = parameters
+    print('loading og info ....')
     ogs_info, taxid_dups_og, total_mems_in_ogs = get_og_info(t)
+
+    print('og info load')
     
     taxlev2ogs =  taxlev2ogs_annotated_tree(t, taxid_dups_og, total_mems_in_ogs,taxonomy_db)
     
+    print('txlev2 ogs')
     current_data["mems_in_ogs"] = total_mems_in_ogs
     
     #Clean properties
@@ -104,7 +110,7 @@ def upload_annotated_tree(tree, name_tree, reftree, taxonomy_counter, user_taxo,
     general_results["Seqs out OGS"] = len(total_mems_in_tree)-len(total_mems_in_ogs)
     general_results["Num Ogs"] = len(ogs_info)
 
-
+    print(general_results)
     
     return  t, general_results,  stats_taxo,  parameters
 
@@ -130,6 +136,7 @@ def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type,
         # print ('response from server:',res.text)
         # return render_template('index.html', general_results = general_results, taxonomy_result = taxo_stats, parameters = parameters)
     
+        
         return tree, general_results,  taxo_stats,  parameters
 
 
@@ -158,6 +165,8 @@ def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type,
         general_results = defaultdict()
         taxo_stats = defaultdict()
         parameters = defaultdict()
+
+       
 
         return t, general_results,  taxo_stats,  parameters
 
@@ -426,9 +435,11 @@ def run_recover():
     best_match = get_best_match(tblfile)
     
     #Create table for og after recovery
-    og_info_recovery = expand_hmm(best_match, glob_og_info)
+    og_info_recovery,  total_recovery_seqs = expand_hmm(best_match, glob_og_info)
+    print(type(og_info_recovery))
     recovery_seqs = set(best_match.keys())
 
+    
     glob_og_info_updated = update_og_info(glob_og_info, og_info_recovery)
     
     total_mems_in_ogs.update(recovery_seqs)
@@ -645,7 +656,6 @@ def download_full_og_info():
         w = csv.writer(data, delimiter='\t') 
 
         # write header
-        #w.writerow(('#OG_name', 'Tax_scope_OG','Dup_name','Dup_lca', 'Size_OG', 'OG_up', 'OG_down'))
         w.writerow(('#OG_name', 'Tax_scope_OG','Dup_name','Dup_lca',  'num_OG_mems', 'Recovery_seqs','OG_up', 'OG_down', 'total_leaves', 'sp_in_OG', 'sp_out_OG', 'members'))
         yield data.getvalue()
         data.seek(0)
