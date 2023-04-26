@@ -7,6 +7,58 @@ from collections import Counter, OrderedDict, defaultdict
 import json
 import random
 
+
+#fpI = json.load(open('/data/projects/og_delineation/benchmark/possvm/scripts/prds_fpI.json'))
+# refog_sp = set()
+# with open('/data/projects/og_delineation/benchmark/possvm/original_data/refog_sp_sci_name.txt') as f:
+    # for line in f:
+        # info = line.strip().split('\t')
+        # refog_sp.add(info[1])
+
+
+# best_myogs = defaultdict()
+# with open('/data/projects/og_delineation/benchmark/possvm/results_ogd/species_losses_08/prds/best_ogd_fscore.tsv') as f:
+    # for line in f:
+        # info = line.strip().split('\t')
+        # best_myogs[info[1]] = info[0]
+
+
+
+# recovery_info = json.load(open('/data/projects/og_delineation/benchmark/possvm/results_ogd/species_losses_08/prds/aln_hmm/recovery_info.json'))
+
+# print(recovery_info)
+
+
+def recover_seqs():
+    def layout_fn(node):
+        if node.is_leaf():
+            if node.name in recovery_info.keys():
+                for k,val in recovery_info[node.name].items():
+                    og_name = k.split('_')[0]
+                    if og_name in best_myogs.keys():
+                        recover_face = TextFace(best_myogs[og_name])
+                    else:
+                        recover_face = TextFace(og_name)
+                        
+                
+                node.add_face(recover_face, column = 7, position = 'aligned' )
+    layout_fn.__name__ = 'recover'
+    layout_fn.contains_aligned_face = True
+    return layout_fn
+
+
+
+
+def background_color_ogs():
+    def layout_fn(node):
+        if node.name in best_myogs.keys():
+            
+            node.sm_style["bgcolor"] = '#2596be'
+
+    layout_fn.__name__ = 'background_refogs'
+    layout_fn.contains_aligned_face = True
+    return layout_fn
+
 def get_pnames_possvm():
     def layout_fn(node):
         if node.is_leaf() and node.props.get('Pname'):
@@ -51,12 +103,30 @@ def get_og_met():
 
 def get_og_possvm():
     def layout_fn(node):
+
+
+        # if node.is_leaf() and node.props.get('Possvm_OG'):
+            # color = node.props.get('Possvm_OG').split('_')[1]
+            # face_pname = TextFace(node.props.get('Possvm_OG').split('_')[0], color = color)
+            # node.add_face(face_pname, column = 5, position = 'aligned')
+        # elif node.props.get('Possvm_OG'):
+            # color = node.props.get('Possvm_OG').split('_')[1]
+            # face_pname = TextFace(node.props.get('Possvm_OG').split('_')[0], color = color)
+            # node.add_face(face_pname, column = 5, position = 'aligned', collapsed_only=True)
+
+        # if node.props.get('Possvm_OG') in fpI.keys():
+            # color = 'red'
+        # else:
+            # color = 'black'
         if node.is_leaf() and node.props.get('Possvm_OG'):
+            
             face_pname = TextFace(node.props.get('Possvm_OG'))
             node.add_face(face_pname, column = 5, position = 'aligned')
         elif node.props.get('Possvm_OG'):
+            
             face_pname = TextFace(node.props.get('Possvm_OG'))
             node.add_face(face_pname, column = 5, position = 'aligned', collapsed_only=True)
+
 
     layout_fn.__name__ = 'possvm_OG'
     layout_fn.contains_aligned_face = True

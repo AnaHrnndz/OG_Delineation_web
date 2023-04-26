@@ -71,14 +71,18 @@ lin2colors['root'] = "Red"
     # colors_gradient = get_gradient('euk', 50)
 
 
-
+# refog_sp = set()
+# with open('/data/projects/og_delineation/benchmark/possvm/original_data/refog_sp_sci_name.txt') as f:
+    # for line in f:
+        # info = line.strip().split('\t')
+        # refog_sp.add(info[1])
 
 
 def get_level(node, level=0):
     if node.is_root():
         return level
     else:
-        return get_level(node.up, level + 1)
+        return get_level(node.up, level +1)
 
 
 def get_layout_leafname():
@@ -104,9 +108,16 @@ def get_layout_leafname():
         if node.is_leaf():
            
             sci_name = node.props.get('sci_name')
+
+            # if sci_name in refog_sp:
+                # color = 'green'
+
+            #else:
+            
+            color = 'black'
             name_seq = node.name.split('.',1)[1]
 
-            node.add_face(TextFace(sci_name, color = 'black', padding_x=2),
+            node.add_face(TextFace(sci_name, color = color, padding_x=2),
                 column=0, position="branch_right")
 
             node.add_face(TextFace(name_seq, color = 'grey', padding_x=2),
@@ -174,7 +185,7 @@ def get_layout_lca_rects(tree):
 
            
 
-            level = get_level(node)
+            level = get_level(node)+7
             lca_face = RectFace(15, float('inf'), 
                     color = color , 
                     text = lca,
@@ -190,8 +201,6 @@ def get_layout_lca_rects(tree):
     layout_fn.__name__ = 'Last common ancestor'
     layout_fn.contains_aligned_face = True
     return layout_fn
-
-
 
 
 def get_layout_evoltype():
@@ -363,11 +372,11 @@ def get_species_overlap():
 
 def get_pnames():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('pname'):
-            face_pname = TextFace(node.props.get('pname'))
+        if node.is_leaf() and node.props.get('pref_name'):
+            face_pname = TextFace(node.props.get('pref_name'))
             node.add_face(face_pname, column = 2, position = 'aligned')
-        elif node.props.get('pname'):
-            face_pname = TextFace(node.props.get('pname'))
+        elif node.props.get('pref_name'):
+            face_pname = TextFace(node.props.get('pref_name'))
             node.add_face(face_pname, column = 2, position = 'aligned', collapsed_only=True)
 
     layout_fn.__name__ = 'Pref name'
@@ -377,11 +386,11 @@ def get_pnames():
 
 def get_ogs():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('og'):
-            og_pname = TextFace(node.props.get('og'))
+        if node.is_leaf() and node.props.get('basal_og'):
+            og_pname = TextFace(node.props.get('basal_og'))
             node.add_face(og_pname, column = 3, position = 'aligned')
-        if node.props.get('og'):
-            face_og = TextFace(node.props.get('og'))
+        if node.props.get('basal_og'):
+            face_og = TextFace(node.props.get('basal_og'))
             node.add_face(face_og, column = 3, position = 'aligned', collapsed_only=True)
 
     layout_fn.__name__ = 'EGGNOG'
@@ -426,13 +435,13 @@ def get_doms():
         if node.is_leaf():
             if node.props.get('dom_arq'):
                 doms = parse_pfam_doms(node)
-                seqFace = SeqMotifFace(seq=None, motifs = doms)
+                seqFace = SeqMotifFace(seq=None, motifs = doms, width=500)
                 node.add_face(seqFace, column =  4, position = "aligned")
         else:
             first_node = next(node.iter_leaves())
             if first_node.props.get('dom_arq'):
                 doms = parse_pfam_doms(first_node)
-                seqFace = SeqMotifFace(seq=None, motifs = doms)
+                seqFace = SeqMotifFace(seq=None, motifs = doms, width=500)
                 node.add_face(seqFace, column =  4, position = "aligned", collapsed_only=True)
         
         

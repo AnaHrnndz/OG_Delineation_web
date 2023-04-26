@@ -2,6 +2,7 @@ from ete4 import Tree, SeqGroup
 from ete4.smartview import TreeStyle, NodeStyle, TreeLayout
 from ete4.smartview.renderer.layouts.seq_layouts import LayoutAlignment
 from layout_web import get_layout_leafname, get_layout_evoltype, get_layout_lca_rects, collapse_og, seqs_out_og, collapse_rank, get_species_overlap, get_pnames, get_ogs, get_doms, prune_tree #sequencebouncer
+
 from layout_possvm import get_pnames_possvm, get_og_euk, get_og_met, get_og_possvm, get_og_ref, get_pfams, background_color_ogs, recover_seqs
 
 
@@ -36,9 +37,9 @@ layouts = [
     TreeLayout('possm_OG_Metazoa', ns = get_og_met(), aligned_faces = True),
     TreeLayout('possvm_OG', ns = get_og_possvm(), aligned_faces = True),
     TreeLayout('possvm_RefOG', ns = get_og_ref(), aligned_faces = True),
-    TreeLayout('possvm_PFAM', ns = get_pfams(), aligned_faces = True),
-    TreeLayout('background_refogs', ns = background_color_ogs()),    
-    TreeLayout('recover', ns = recover_seqs())     
+    # TreeLayout('possvm_PFAM', ns = get_pfams(), aligned_faces = True),
+    # TreeLayout('background_refogs', ns = background_color_ogs()),    
+    # TreeLayout('recover', ns = recover_seqs())     
     #LayoutAlignment(sys.argv[2], width=500)
         ]
 

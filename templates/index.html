@@ -28,82 +28,95 @@
     <h1 id="title">Orthologous Group Delineation with ETE4</h1>
 
         {% if error_message %}
-            
-            <div class="alert alert-danger" role="alert">
-                {{error_message}}
+            <div class="container">
+                <div class="col-12">
+                    <div class="alert alert-danger" role="alert">
+                        {{error_message}}
+                    </div>
+                </div>
             </div>
             
         {% endif %}
 
         {% if success_message %}
-        <div class="alert alert-success" role="alert">
-            {{success_message}}
+        <div class="container">
+            <div class="col-12">
+                <div class="alert alert-success" role="alert">
+                    {{success_message}}
+                </div>
+            </div>
         </div>
         {% endif %}
 
         {% if parameters%}
-        <div class="alert alert-info" role="alert">
-            <p>
-                Parameters:
-                    {% for parameter,value in parameters.items()%}
-                        {{parameter}}: {{value}}, 
-                
-                    {% endfor %}
-            </p>
+        <div class="container">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <p>
+                        Parameters:
+                            {% for parameter,value in parameters.items()%}
+                                {{parameter}}: {{value}}, 
+
+                            {% endfor %}
+                    </p>
+                </div>
+            </div>
         </div>      
         {% endif %}  
 
 
         <div class="container">
-            <form action="/upload_tree" method="post" enctype="multipart/form-data" class="row g-3">
-                <div class="accordion-group" id="accordionExample" class="col-12">
+            <form action="/upload_data" method="post" enctype="multipart/form-data" class="row">
+                
+                <div class="col-12">
+                    
+                    <div class="row">
+                        
+                        <div class="col-6">
+                            <label for="treefile">Select your tree:</label>
+                            <input type="file" class="form-control" id="treefile" name="tree">
+                        </div>
+                    
+                        
+                        <div class="col-6">
+                            <label for="aln_fasta">Select your Alignment:</label>
+                            <input type="file" class="form-control" id="aln_fasta" name="aln">
+                        </div>
+                    </div>  
+                </div>
+
+                <div class="accordion-group" id="accordionExample" class="col-9">
                     <div class="accordion-item">
                       <h2 class="accordion-header" id="headingOne">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                          1. Upload Tree
+                          1. Upload More info
                         </button>
                       </h2>
                         <div id="collapseOne" class="accordion-collapse collapse hide" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
                             <div class="accordion-body">
+
                                 <div class="row">
-                                    <div class="col-6">
-                                        <label for="treefile">Select your tree:</label>
-                                        <input type="file" class="form-control" id="treefile" name="tree">
-                                    </div>
-                                    <div class="col-3">
-                                        <label for="annot_tree">Annotated Tree:</label>
-                                        <select class="form-select" id="annot_tree" name="annotated_tree">
-                                            <option selected value="No">No</option>
-                                            <option value="Yes">Yes</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-3">
-                                        <label for="run_midpoint">Run midpoint rooting:</label>
-                                        <select class="form-select" id="run_midpoint" name="midpoint">
-                                            <option selected value="Yes">Yes</option>
-                                            <option value="No">No</option>
+                                    <div class="col-md-3">
+                                        <label for="run_rooting">Rooting:</label>
+                                        <select class="form-select" id="run_rooting" name="rooting">
+                                            <option selected value="Midpoint">Midpoint</option>
+                                            <option value="MinVar">MinVar</option>
                                         </select>
                                     </div>
                                 </div>
-                        
-                            
+
                                 <div class="row">
-                                    <div class="col-3">
-                                        <label for="reft">Select your Reference tree:</label>
-                                        <input type="file" class="form-control"  id="reft" name="rtree">
-                                    </div>
-                                    <div  class="col-3">
-                                        <label for="taxonomy_counter">Counter taxonomy:</label>
-                                        <input type="file" class="form-control"  id="taxonomy_counter" name="count_taxo">
-                                    </div>
-                                    <div class="col-3">
+                                    <div class="col-md-3">
                                         <label for="user_taxonomy">Taxonomy database:</label>
                                         <select class="form-select" id="user_taxonomy" name="user_taxonomy_database">
-                                            <option selected value="Egg5">EggNOG5.0</option>
-                                            <option value="Egg6">EggNOG6.0</option>
+                                            <option selected value="Egg6">EggNOG6.0</option>
+                                            <option value="Egg5">EggNOG5.0</option>
                                         </select>
                                     </div>
-                                    <div class="col-3">
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-3">
                                         <label for="taxonomy_type">Taxonomy type:</label>
                                         <select class="form-select" id="taxonomy_type" name="taxo_type">
                                             <option selected value="NCBI">NCBI Taxonomy</option>
@@ -111,21 +124,43 @@
                                         </select>
                                     </div>
                                 </div>
+
                                 <div class="row">
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary">Upload Tree</button>
+                                    <div class="col-md-3">
+                                        <label for="reft">Select your Reference tree:</label>
+                                        <input type="file" class="form-control"  id="reft" name="rtree">
+                                    </div>
+                                </div>    
+
+                                    
+                                <div class="row">
+                                    <div  class="col-md-3">
+                                        <label for="taxonomy_counter">Counter taxonomy:</label>
+                                        <input type="file" class="form-control"  id="taxonomy_counter" name="count_taxo">
                                     </div>
                                 </div>
+  
+                                
                             </div>
                         </div>
                     </div>
                 </div>
-
+                
+                <div class="d-grid gap-2 col-3 mx-auto">
+                  
+                    <button type="submit" class="btn btn-primary">Upload Data</button>
+                   
+                </div>
+                
             </form>
         </div>
-            
+
+
+        {%if hide%}
         <div class="container">
-            <form action="/run_analysis" method="post" enctype="multipart/form-data" class="row g-3">
+            <form action="/run_analysis" method="post" enctype="multipart/form-data" class="row">
+
+
                 <div class="accordion-group" id="accordionExample2" class="col-12">
                     <div class="accordion-item">
                       <h2 class="accordion-header" id="headingTwo">
@@ -145,7 +180,7 @@
                                         <label for="outliers_reftree">Outliers reftree:</label>
                                         <input type="number" class="form-control" value="0.05" step="0.01" id="outliers_reftree" name="out_reft">
                                     </div>
-                                    <div class="col-3">
+                                    <div class="col-md-3">
                                         <label for="inherit_outliers">Inherit outliers:</label>
                                         <select class="form-select" id="inherit_outliers" name="inherit_out">
                                             <option selected value="yes">Yes</option>
@@ -175,15 +210,21 @@
                                         <input type="number" class="form-control" value="0.2" step="0.01" id="so_overlap_arq" name="so_arq">
                                     </div>
                                 </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary">Run analysis</button>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <div class="d-grid gap-2 col-3 mx-auto">
+                    <button type="submit" class="btn btn-primary">Run analysis</button>
+                </div>
+                
             </form>
         </div>
+
+
+
 
         <div class="container">
             <div class="accordion-group" id="resultTable" class="col-12">
@@ -242,13 +283,13 @@
                                                 </form>
                                         </div>
 
-                                        <div class="col-2">
-                                            <!-- Button trigger modal -->
+                                        <!-- <div class="col-2">
+                                            Button trigger modal
                                             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal">
                                                 Recover sequences
                                             </button>
 
-                                              <!-- Modal -->
+                                               Modal 
                                             <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
@@ -269,9 +310,9 @@
                                                         </div>
                                                     </form>
                                                 </div>
-                                            </div>
-                                            </div>
-                                        </div>
+                                            </div> 
+                                            </div> 
+                                        </div>  -->
                                             
                                 </div>
 
@@ -342,6 +383,8 @@
             </div>
 
         </div>
+
+        {%endif%}
 
                 
 
