@@ -31,7 +31,7 @@ import random
 
 def recover_seqs():
     def layout_fn(node):
-        if node.is_leaf():
+        if node.is_leaf:
             if node.name in recovery_info.keys():
                 for k,val in recovery_info[node.name].items():
                     og_name = k.split('_')[0]
@@ -61,7 +61,7 @@ def background_color_ogs():
 
 def get_pnames_possvm():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('Pname'):
+        if node.is_leaf and node.props.get('Pname'):
             face_pname = TextFace(node.props.get('Pname'))
             node.add_face(face_pname, column = 2, position = 'aligned')
         elif node.props.get('Pname'):
@@ -75,7 +75,7 @@ def get_pnames_possvm():
 
 def get_og_euk():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('OG_Euk'):
+        if node.is_leaf and node.props.get('OG_Euk'):
             face_pname = TextFace(node.props.get('OG_Euk'))
             node.add_face(face_pname, column = 3, position = 'aligned')
         elif node.props.get('OG_Euk'):
@@ -89,7 +89,7 @@ def get_og_euk():
 
 def get_og_met():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('OG_Metazoa'):
+        if node.is_leaf and node.props.get('OG_Metazoa'):
             face_pname = TextFace(node.props.get('OG_Metazoa'))
             node.add_face(face_pname, column = 4, position = 'aligned')
         elif node.props.get('OG_Metazoa'):
@@ -105,7 +105,7 @@ def get_og_possvm():
     def layout_fn(node):
 
 
-        # if node.is_leaf() and node.props.get('Possvm_OG'):
+        # if node.is_leaf and node.props.get('Possvm_OG'):
             # color = node.props.get('Possvm_OG').split('_')[1]
             # face_pname = TextFace(node.props.get('Possvm_OG').split('_')[0], color = color)
             # node.add_face(face_pname, column = 5, position = 'aligned')
@@ -118,7 +118,7 @@ def get_og_possvm():
             # color = 'red'
         # else:
             # color = 'black'
-        if node.is_leaf() and node.props.get('Possvm_OG'):
+        if node.is_leaf and node.props.get('Possvm_OG'):
             
             face_pname = TextFace(node.props.get('Possvm_OG'))
             node.add_face(face_pname, column = 5, position = 'aligned')
@@ -135,7 +135,7 @@ def get_og_possvm():
 
 def get_og_ref():
     def layout_fn(node):
-        if node.is_leaf() and node.props.get('RefOG'):
+        if node.is_leaf and node.props.get('RefOG'):
             face_pname = TextFace(node.props.get('RefOG'))
             node.add_face(face_pname, column = 6, position = 'aligned')
         elif node.props.get('RefOG'):
@@ -160,7 +160,7 @@ def parse_pfam_doms(n):
 
 def get_pfams():
     def layout_fn(node):
-        if node.is_leaf():
+        if node.is_leaf:
             doms = parse_pfam_doms(node)
             seqFace = SeqMotifFace(seq=None, motifs = doms)
             node.add_face(seqFace, column =  1, position = "aligned")
