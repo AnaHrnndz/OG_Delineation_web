@@ -2,7 +2,7 @@ from ete4.smartview import NodeStyle
 from ete4 import NCBITaxa
 from ete4.smartview import TreeStyle
 from ete4.smartview  import RectFace, CircleFace, SeqMotifFace, TextFace, OutlineFace
-from ete4.treeview import random_color
+from ete4.utils import random_color
 from collections import Counter, OrderedDict, defaultdict
 import json
 import random
@@ -39,8 +39,8 @@ def recover_seqs():
                         recover_face = TextFace(best_myogs[og_name])
                     else:
                         recover_face = TextFace(og_name)
-                        
-                
+
+
                 node.add_face(recover_face, column = 7, position = 'aligned' )
     layout_fn.__name__ = 'recover'
     layout_fn.contains_aligned_face = True
@@ -52,7 +52,7 @@ def recover_seqs():
 def background_color_ogs():
     def layout_fn(node):
         if node.name in best_myogs.keys():
-            
+
             node.sm_style["bgcolor"] = '#2596be'
 
     layout_fn.__name__ = 'background_refogs'
@@ -119,11 +119,11 @@ def get_og_possvm():
         # else:
             # color = 'black'
         if node.is_leaf and node.props.get('Possvm_OG'):
-            
+
             face_pname = TextFace(node.props.get('Possvm_OG'))
             node.add_face(face_pname, column = 5, position = 'aligned')
         elif node.props.get('Possvm_OG'):
-            
+
             face_pname = TextFace(node.props.get('Possvm_OG'))
             node.add_face(face_pname, column = 5, position = 'aligned', collapsed_only=True)
 
@@ -167,11 +167,11 @@ def get_pfams():
         else:
             first_node = next(node.iter_leaves())
             if first_node.name:
-                doms = parse_pfam_doms(node) 
+                doms = parse_pfam_doms(node)
                 seqFace = SeqMotifFace(seq=None, motifs = doms)
                 node.add_face(seqFace, column =  1, position = "aligned", collapsed_only=True)
-        
-        
+
+
     layout_fn.__name__ = 'possvm_PFAM'
     layout_fn.contains_aligned_face = True
     return layout_fn
