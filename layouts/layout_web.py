@@ -26,9 +26,13 @@ colors_arq = get_gradient("orange", 50)
 
 lin2colors = defaultdict()
 lin2colors['Bacteria'] = '#53bd42'
+lin2colors['2'] = '#53bd42'
 lin2colors['Eukaryota'] = '#f200ff'
+lin2colors['2759'] = '#f200ff'
 lin2colors['Archaea'] = '#ff7b00'
+lin2colors['2157'] = '#ff7b00'
 lin2colors['cellular organisms'] = "Grey"
+lin2colors['131567'] = "Grey"
 lin2colors['root'] = "Red"
 
 
@@ -176,7 +180,8 @@ def get_layout_evoltype():
                 node.sm_style['size'] = 5
                 node.sm_style['shape'] = 'square'
 
-                lca = node.props.get('lca_node_name')
+                #lca = node.props.get('lca_node_name')
+                lca = node.props.get('lca_dup')
                 if lca in lin2colors.keys():
                     color = lin2colors[lca]
                 else:
@@ -191,6 +196,8 @@ def get_layout_evoltype():
                     elif '2157' in node.props.get('lineage').split('|'):
                         color = random.choice(colors_arq)
                         lin2colors[lca] = color
+                    else:
+                        color='grey'
 
                 node.sm_style["fgcolor"] = color
 
@@ -233,6 +240,7 @@ def background_og():
     def layout_fn(node):
         if node.props.get('node_is_og'):
             lca = node.props.get('lca_node_name')
+            #lca = node.props.get('lca_dup')
             if lca in lin2colors.keys():
                 color = lin2colors[lca]
 
