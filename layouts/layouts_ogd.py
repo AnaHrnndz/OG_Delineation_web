@@ -167,7 +167,7 @@ def get_layout_evoltype():
                 node.sm_style["fgcolor"] = 'Coral'
                 node.sm_style["size"] = 2
 
-            if node.props.get('node_is_og'):
+            if node.props.get('monophyletic_og'):
                 node.sm_style['size'] = 5
                 node.sm_style['shape'] = 'square'
 
@@ -228,7 +228,7 @@ def collapse_og():
 
 def background_og():
     def layout_fn(node):
-        if node.props.get('node_is_og'):
+        if node.props.get('monophyletic_og'):
             lca = node.props.get('lca_node_name')
             
             if lca in lin2colors.keys():
@@ -243,12 +243,12 @@ def background_og():
 def background_mog():
     def layout_fn(node):
 
-        if node.is_leaf and node.props.get('mOG'):
-            face = TextFace(node.props.get('mOG'))
+        if node.is_leaf and node.props.get('pOG'):
+            face = TextFace(node.props.get('pOG'))
             node.sm_style["bgcolor"] = 'blue'
             node.add_face(face, column = 2, position = 'aligned')
 
-    layout_fn.__name__ = "Brackground mOG"
+    layout_fn.__name__ = "Brackground pOG"
     layout_fn.contains_aligned_face = True
     return layout_fn
 
@@ -317,7 +317,7 @@ def collapse_rank():
         if node.props.get('rank') in  ['order', 'genus', 'family'] :
             node.sm_style["draw_descendants"] = False
 
-            og_nodes = node.search_nodes(node_is_og="True")
+            og_nodes = node.search_nodes(monophyletic_og="True")
             if len(og_nodes) > 0:
                 node.sm_style['outline_color'] = "Dimgray"
 

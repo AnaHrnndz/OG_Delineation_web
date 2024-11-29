@@ -3,7 +3,7 @@ from ete4.smartview  import  SeqMotifFace, TextFace
 
 def get_emapper_pref_name():
     def layout_fn(node):
-        face_pname = TextFace(node.props.get('pref_name'))
+        face_pname = TextFace(node.props.get('Preferred_name'))
         
         if node.is_leaf:
             node.add_face(face_pname, column = 2, position = 'aligned')
@@ -18,32 +18,42 @@ def get_emapper_pref_name():
 def get_eggnog_OG():
     def layout_fn(node):
         if node.is_leaf:
-            eggnog_list = node.props.get('eggNOG_OGs').split()
+            eggnog_list = node.props.get('eggNOG_OGs').split('||')
             for egg_og in eggnog_list:
-                #og_name, taxid, sciname = egg_og.split()
-                og_name, taxid, sciname = ['none', 'none', 'none']
+                og_name, taxid, = egg_og.split('|')[0].split('@')
+                
                 if taxid == '2759':
                     og_euk = og_name
                     face_og_euk = TextFace(og_euk)
                     node.add_face(face_og_euk, column = 3, position = 'aligned')
-                elif taxid =='33208':
-                    og_metazoa = og_name
-                    face_og_euk = TextFace(og_metazoa)
+                elif taxid =='2':
+                    og_bact = og_name
+                    face_og_euk = TextFace(og_bact)
                     node.add_face(face_og_euk, column = 4, position = 'aligned')
+
+                elif taxid =='2157':
+                    og_arq = og_name
+                    face_og_euk = TextFace(og_arq)
+                    node.add_face(face_og_euk, column = 5, position = 'aligned')
             
         else:
             eggnog_list = node.props.get('eggNOG_OGs_counter').split('||')
             for egg_og in eggnog_list:
-                #og_name, taxid, sciname = egg_og.split()
-                og_name, taxid, sciname = ['none', 'none', 'none']
+                og_name, taxid, = egg_og.split('|')[0].split('@')
+                
                 if taxid == '2759':
                     og_euk = og_name
                     face_og_euk = TextFace(og_euk)
-                    node.add_face(face_og_euk, column = 3, position = 'aligned')
-                elif taxid =='33208':
-                    og_metazoa = og_name
-                    face_og_euk = TextFace(og_metazoa)
-                    node.add_face(face_og_euk, column = 4, position = 'aligned')
+                    node.add_face(face_og_euk, column = 3, position = 'aligned', collapsed_only=True)
+                elif taxid =='2':
+                    og_bact = og_name
+                    face_og_euk = TextFace(og_bact)
+                    node.add_face(face_og_euk, column = 4, position = 'aligned', collapsed_only=True)
+
+                elif taxid =='2157':
+                    og_arq = og_name
+                    face_og_euk = TextFace(og_arq)
+                    node.add_face(face_og_euk, column = 5, position = 'aligned', collapsed_only=True)
             
     layout_fn.__name__ = 'eggnog_OGs'
     layout_fn.contains_aligned_face = True

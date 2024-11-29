@@ -20,7 +20,10 @@ if len(sys.argv) >1:
 else:
     import layouts_ogd
 
-    
+# for n in t.traverse():
+    # if  n.is_leaf:
+        # print(n.props['Preferred_name'])
+        
 layouts = [
     # Layout for OGD annotations
     TreeLayout('Scientific name', ns = layouts_ogd.get_layout_leafname(), aligned_faces = True),
@@ -49,8 +52,8 @@ layouts = [
 
 # Turn Off layouts. By default all layout are activated
 for l in layouts:
-    if l.name in ['Seqs out OGS', 'Alignment', 'EGGNOG', 'PFAM Domains', 'Long branches','possvm_PFAM', 
-                    'Prune tree', 'Collapse order rank', 'possm_OG_Metazoa', 'Taxonomic Outliers']:
+    if l.name in ['Seqs out OGS', 'Collapse', 'Collapse order rank','Long branches', 'Taxonomic Outliers'
+                    'emapper_pref_name', 'eggnog_OGs', 'PFAM_arq' ]:
         l.active = False
 
 
@@ -60,14 +63,12 @@ t.dist = 0.05
 
 name = 'upload_tree'
 
-props_popup = ['taxo_outlier', 'mOG','node_create_og', 'inparalogs_rate', 'BEST_RESP_NUM', 'evoltype_2', 
-                'so_cell_org', 'outliers_node', 'dup_lineage', 'score1', 'support', 'species_losses_percentage',
-                'rank', 'OGD_annot', 'sci_name', 'so_arq', 'dup_score', 'species_losses', 'node_is_og', 'lca_dup', 
-                'so_score_dup', 'is_root', 'common_name', 'sp_out', 'so_bact', 'BEST_REP_NODE', 'create_mOG',
-                'sp_loss_perc', 'num_lineage_losses', 'BEST_REP', 'score2', '_mems_og', 'so_euk', 'lineage', 'taxid', 
-                'outliers_tax', 'dist', 'so_score', 'total_leaves', 'name', 'min_sp_overlap',
-                'lca_node', 'len_sp_in', 'len_leaves_in', 'recover_seqs', 'seq_out_og', 'outliers_reftree', 
-                'lca_node_name', 'best_tax', '2', '2157', '2759' , 'common_name', 'best_lost_1', 'best_lost_1']
+props_popup = ['node_is_og', 'dist', 'species_losses', 'node_create_og', 'lca_node_name', 'len_leaves_in', 
+    'taxid', 'sci_name', 'lineage', 'lca_dup', 'inparalogs_rate', 'ch1_name', 'dup_node_name', 'is_root', 
+    'total_leaves', 'dups_up', 'ogs_up', 'common_name', 'dups_down', 'so_score_dup','ogs_down', 'score1', 
+    'rank', 'dup_lineage', 'lca_node', 'len_leaves_out', 'species_losses_percentage', 'name', 'ch2_name', 
+    'score2', 'sp_out', 'so_score', 'leaves_out','dup_score', 'overlap', 'evoltype_2', 'mOG', 'len_sp_in', 
+    'best_tax', 'node_is_mog', 'recover_seqs', 'recover_in']
 
 # Trigger the interactive web server
-t.explore(name = name, layouts = layouts, show_leaf_name = False , include_props = props_popup, keep_server=True, host = '138.4.138.141' ,open_browser =False)
+t.explore(name = name, layouts = layouts, show_leaf_name = False , include_props = props_popup, keep_server=True ,open_browser =False)
