@@ -134,7 +134,7 @@ def get_layout_lca_rects(tree):
                     color = random.choice(colors_arq)
                     lin2colors[lca] = color
 
-            level = get_level(node)+7
+            level = get_level(node)+8
             lca_face = RectFace(15, float('inf'),
                     color = color ,
                     text = lca,
@@ -298,12 +298,12 @@ def long_branch_outlier():
 
         for l in node.search_nodes(long_branch_outlier='True'):
 
-            l.sm_style['fgcolor'] = "orange"
-            l.sm_style['bgcolor'] = "orange"
+            l.sm_style['fgcolor'] = "yellow"
+            l.sm_style['bgcolor'] = "yellow"
 
             for anc in l.ancestors():
-                anc.sm_style['hz_line_color'] = 'orange'
-                anc.sm_style['vt_line_color'] = 'orange'
+                anc.sm_style['hz_line_color'] = 'yellow'
+                anc.sm_style['vt_line_color'] = 'yellow'
 
 
     layout_fn.__name__ = "Long Branches"

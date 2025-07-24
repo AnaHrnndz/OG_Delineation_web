@@ -49,7 +49,7 @@ def run_upload(tree, name_tree, reftree, user_counter, user_taxo, taxonomy_type,
         path_out = UPLOAD_FOLDER+'/user_data/'
 
         # 2. Tree setup (Pre-analysis):  resolve polytomies, rooting, ncbi annotation, etc
-        t , sp_set, total_mems_in_tree, SPTOTAL, user_props = tree_setup.run_setup(t, name_tree, taxonomy_db, rooting, path_out, path2tree)
+        t , sp_set, total_mems_in_tree, SPTOTAL, user_props = tree_setup.run_setup(t, name_tree, taxonomy_db, rooting, path_out, path2tree, '.')
 
 
         # Clean properties
@@ -131,16 +131,3 @@ def load_annot_tree(t):
     return  t_nw, general_results,  stats_taxo,  parameters, SPTOTAL,  t_prune_nw, total_mems_in_tree
 
 
-# def load_no_annot_tree(tree=None):
-
-    # """
-        # Load tree from newick format
-    # """
-
-    # print('-Load tree: ')
-
-    # t = PhyloTree((tree))
-
-    # t.set_species_naming_function(util.parse_taxid)
-
-    # return t
